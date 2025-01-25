@@ -81,7 +81,6 @@ ndindex==1.9.2
 nest-asyncio==1.6.0
 networkx==3.2.1
 nltk==3.9.1
-numba==0.60.0
 numexpr==2.10.2
 numpy==1.26.4
 oauthlib==3.2.2
