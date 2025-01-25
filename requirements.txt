@@ -153,7 +153,7 @@ transformers==4.48.1
 typing_extensions==4.12.2
 tzdata==2024.2
 umap-learn==0.5.7
-urllib3==2.3.0
+urllib3==1.26.20
 wandb==0.19.4
 wcwidth==0.2.13
 Werkzeug==3.1.3
