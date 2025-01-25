@@ -44,7 +44,7 @@ future==1.0.0
 get-annotations==0.1.2
 gitdb==4.0.12
 GitPython==3.1.44
-google-auth==2.18.1
+google-auth==2.38.0
 google-auth-oauthlib==1.0.0
 grpcio==1.54.2
 h11==0.14.0
@@ -153,7 +153,7 @@ transformers==4.48.1
 typing_extensions==4.12.2
 tzdata==2024.2
 umap-learn==0.5.7
-urllib3==1.26.20
+urllib3==2.3.0
 wandb==0.19.4
 wcwidth==0.2.13
 Werkzeug==3.1.3
