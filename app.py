@@ -293,11 +293,10 @@ def callback():
     
     return "OK"
 
+client = DeepSeekClient()  # ✅ 提前初始化
 # ------------------------- 服務啟動 -------------------------
 if __name__ == "__main__":
     # 初始化客戶端
-    global client
-    client = DeepSeekClient()
     logger.info("系統初始化完成 - 三軍總醫院放射腫瘤部衛教機器人阿泰 已上線")
     
     # 啟動Flask服務
