@@ -290,7 +290,8 @@ def handle_message(event):
         user_id = event.source.user_id
 
         # 🎯 1. 觸發醫師選單
-        if user_input == "我想查詢我的放射治療主治醫師。":
+        if user_input == "我想查詢我的放射治療主治醫師":
+            logger.debug("進入選單觸發條件") 
             return _send_flex_reply(reply_token, get_doctor_menu())
 
         # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
