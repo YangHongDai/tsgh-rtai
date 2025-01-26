@@ -239,7 +239,6 @@ class DeepSeekClient:
         return response[:1500]
 
 # ------------------------- 建立 Flex Message 選單 -------------------------
-
 def get_doctor_menu():
     """動態生成醫師選單"""
     doctor_buttons = [
@@ -252,17 +251,22 @@ def get_doctor_menu():
 
     return {
         "type": "flex",
-        "altText": "請選擇醫師查詢的名稱",
+        "altText": "請選擇醫師名稱",
         "contents": {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "請選擇醫師名稱", "weight": "bold", "size": "lg"},
-                    {"type": "separator"}
-                ] + doctor_buttons
-            }
+            "type": "carousel",  # ✅ 使用 carousel 避免選單超過限制
+            "contents": [
+                {
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "請選擇醫師名稱", "weight": "bold", "size": "lg"},
+                            {"type": "separator"}
+                        ] + doctor_buttons[:5]  # ✅ 限制最多 5 個按鈕，超過就分頁
+                    }
+                }
+            ]
         }
     }
 
@@ -315,7 +319,7 @@ def _send_reply(reply_token, message_text):
     return "OK"
 
 def _send_flex_reply(reply_token, flex_content):
-    """發送LINE Flex Message（選單）"""
+    """發送 LINE Flex Message（選單）"""
     with ApiClient(configuration) as api_client:
         line_api = MessagingApi(api_client)
         line_api.reply_message(
