@@ -239,35 +239,44 @@ class DeepSeekClient:
         return response[:1500]
 
 # ------------------------- 建立 Flex Message 選單 -------------------------
+# ------------------------- 修正後的 Flex Message 選單 -------------------------
 def get_doctor_menu():
-    """動態生成醫師選單"""
-    doctor_buttons = [
-        {
-            "type": "button",
-            "action": {"type": "message", "label": doctor_name, "text": doctor_name},
-            "style": "primary"
-        } for doctor_name in client.doctor_data.keys()
-    ]
-
-    return {
-        "type": "flex",
-        "altText": "請選擇醫師名稱",
-        "contents": {
-            "type": "carousel",  # ✅ 使用 carousel 避免選單超過限制
-            "contents": [
-                {
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "請選擇醫師名稱", "weight": "bold", "size": "lg"},
-                            {"type": "separator"}
-                        ] + doctor_buttons[:5]  # ✅ 限制最多 5 個按鈕，超過就分頁
-                    }
-                }
-            ]
+    """動態生成醫師選單（符合 LINE Flex Message 規範）"""
+    bubbles = []
+    doctors = list(client.doctor_data.keys())
+    
+    # 每頁最多 10 個按鈕，自動分頁
+    for i in range(0, len(doctors), 10):
+        page_doctors = doctors[i:i+10]
+        buttons = [
+            {
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": doctor,
+                    "text": doctor
+                },
+                "style": "primary",
+                "margin": "md"
+            } for doctor in page_doctors
+        ]
+        
+        bubble = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "請選擇醫師", "weight": "bold", "size": "xl"},
+                    {"type": "separator", "margin": "md"}
+                ] + buttons
+            }
         }
+        bubbles.append(bubble)
+    
+    return {
+        "type": "carousel",
+        "contents": bubbles
     }
 
 
