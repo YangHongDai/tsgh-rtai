@@ -11,6 +11,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
+from Bio import Entrez
 
 # ------------------------- 初始化配置 -------------------------
 load_dotenv()
@@ -272,33 +273,49 @@ def get_flex_menu():
 
 
 # ------------------------- LINE訊息處理 -------------------------
+LITERATURE_TRIGGERS = ["文獻", "研究", "來源", "source", "reference"]
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
         user_input = event.message.text.strip()
         reply_token = event.reply_token
-        user_id = event.source.user_id  # 取得使用者ID
+        user_id = event.source.user_id
 
-        # 1️⃣ **檢查是否詢問醫師資訊**
+        # 🎯 1. 優先處理醫師資訊查詢
         for doctor_name in client.doctor_data.keys():
             if doctor_name in user_input:
                 doctor_info = client.get_doctor_info(doctor_name)
                 if doctor_info:
                     return _send_reply(reply_token, doctor_info)
 
-        # 安全檢查
+        # 🎯 2. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
-        
-        ###For menu
-        if user_input in ["", ""]:
-            return _send_flex_reply(reply_token, get_flex_menu())
 
-        if user_input in client.doctor_data:
-            return _send_flex_reply(reply_token, client.get_doctor_info(user_input))
+        # 🎯 3. 文獻請求觸發機制（新增部分）
+        literature_triggers = ["文獻", "研究", "來源", "source", "reference"]
+        if any(trigger in user_input.lower() for trigger in literature_triggers):
+            try:
+                # PubMed API調用
+                pubmed_ids = search_pubmed(user_input, max_results=3)
+                articles = [fetch_article_details(pid) for pid in pubmed_ids]
+                
+                if not articles:
+                    response = "⚠️ 目前未找到相關文獻，建議簡化關鍵字或諮詢醫師。"
+                else:
+                    response = "📚 以下為PubMed權威文獻：\n\n"
+                    for art in articles:
+                        response += f"► {art['title']}\n作者：{', '.join(art['authors'][:2])}\n連結：{art['url']}\n\n"
+                    response += "※ 注意：此為學術資料，具體診療請遵醫囑"
+                    
+                return _send_reply(reply_token, response)
+            
+            except Exception as e:
+                logger.error(f"PubMed檢索失敗: {str(e)}")
+                return _send_reply(reply_token, "文獻服務暫時不可用，請稍後再試")
 
-        # 生成回覆，考慮歷史對話
+        # 🎯 4. 原有醫療回覆生成流程
         try:
             response = client.generate_medical_response(user_id, user_input)
         except Exception as e:
@@ -307,7 +324,6 @@ def handle_message(event):
 
         return _send_reply(reply_token, response)
 
-    
     except Exception as e:
         logger.error(f"訊息處理失敗: {str(e)}")
         return _send_reply(reply_token, "【系統通知】訊息處理異常，已通知工程團隊")
@@ -324,17 +340,36 @@ def _send_reply(reply_token, message_text):
         )
     return "OK"
 
-def _send_flex_reply(reply_token, flex_message_content):
-    """發送 Flex Message 選單"""
-    with ApiClient(configuration) as api_client:
-        line_api = MessagingApi(api_client)
-        line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[FlexMessage(alt_text="請選擇您要諮詢的項目", contents=flex_message_content)]
-            )
-        )
-    return "OK"
+
+def search_pubmed(keyword, max_results=3):
+    """PubMed文獻搜索"""
+    Entrez.email = "he165076373@hotmail.com"  # 需申請NCBI帳號
+    handle = Entrez.esearch(db="pubmed", term=keyword, retmax=max_results, sort="relevance")
+    result = Entrez.read(handle)
+    handle.close()
+    return result.get("IdList", [])
+
+def fetch_article_details(pubmed_id):
+    """獲取文獻詳情（需自訂解析邏輯）"""
+    try:
+        handle = Entrez.efetch(db="pubmed", id=pubmed_id, retmode="xml")
+        article_data = Entrez.read(handle)[0]['MedlineCitation']
+        
+        authors = [f"{author['LastName']} {author['Initials']}" 
+                  for author in article_data.get('Article', {}).get('AuthorList', [])]
+        
+        return {
+            'title': article_data['Article']['ArticleTitle'],
+            'authors': authors[:3],  # 最多取3位作者
+            'url': f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}/"
+        }
+    except Exception as e:
+        logger.error(f"文獻解析失敗 {pubmed_id}: {str(e)}")
+        return None
+
+
+
+
 # ------------------------- Flask路由 -------------------------
 @app.route("/callback", methods=['POST'])
 def callback():
