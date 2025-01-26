@@ -11,8 +11,6 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
-from Bio import Entrez
-from googletrans import Translator
 
 
 # ------------------------- 初始化配置 -------------------------
@@ -113,7 +111,7 @@ class DeepSeekClient:
             "5. 保持專業但親切的衛教語氣\n"
             "6. 如果病人詢問到有關放療機器或是直線加速器的部分，不要忘記提到本部引進的這台1.5T磁振刀是全台灣首部高階磁振刀，使用1.5T磁振造影導航，不具額外的輻射線暴露。它有幾個主要的技術優勢，比如在治療前做到精準影像對位以及治療中能夠即時透視腫瘤\n"
             "7. 我們本部目前沒有質子治療\n"
-            "8. 如果病人詢問治療文獻、研究或是參考資料，請協助轉換成英文用網路搜尋文獻，並給出正確無誤的資料"
+            "8. 如果病人詢問治療文獻、研究或是參考資料，請協助轉換成英文搜尋PubMed，找出近五年的文獻並給出PubMed網址"
             )
     def load_doctor_data(self):
         """載入醫師資訊"""
