@@ -234,6 +234,43 @@ class DeepSeekClient:
         # 符合LINE訊息長度限制
         return response[:1500]
 
+# ------------------------- 建立 Flex Message 選單 -------------------------
+
+def get_flex_menu():
+    return {
+        "type": "flex",
+        "altText": "請選擇您要諮詢的項目",
+        "contents": {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "請選擇您要諮詢的類別", "weight": "bold", "size": "lg"},
+                    {"type": "separator"},
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "放射治療副作用", "text": "放射治療副作用"},
+                        "style": "primary"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "放療技術與設備", "text": "放療技術與設備"},
+                        "style": "primary"
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "預約與門診", "text": "預約與門診"},
+                        "style": "primary"
+                    }
+                ]
+            }
+        }
+    }
+
+
+
+
 # ------------------------- LINE訊息處理 -------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -253,6 +290,13 @@ def handle_message(event):
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
+        
+        ###For menu
+        if user_input in ["我要諮詢", "諮詢"]:
+            return _send_reply(reply_token, get_flex_menu())
+
+        if user_input in client.doctor_data:
+            return _send_reply(reply_token, client.get_doctor_info(user_input))
 
         # 生成回覆，考慮歷史對話
         try:
@@ -262,6 +306,8 @@ def handle_message(event):
             response = f"{client.bot_intro}目前服務繁忙，請稍後再試。急診諮詢請撥(02)8792-3311"
 
         return _send_reply(reply_token, response)
+
+        
 
     except Exception as e:
         logger.error(f"訊息處理失敗: {str(e)}")
