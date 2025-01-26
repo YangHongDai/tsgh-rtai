@@ -27,22 +27,74 @@ def search_pubmed(keyword, max_results=3):
     return result.get("IdList", [])
 
 def fetch_article_details(pubmed_id):
-    """獲取文獻詳情（需自訂解析邏輯）"""
+    """安全解析 PubMed 文獻詳情"""
     try:
-        handle = Entrez.efetch(db="pubmed", id=pubmed_id, retmode="xml")
-        article_data = Entrez.read(handle)[0]['MedlineCitation']
+        # 🔹 明確指定返回格式為 XML
+        handle = Entrez.efetch(
+            db="pubmed",
+            id=pubmed_id,
+            retmode="xml",  # 必須指定 XML 格式
+            rettype="medline"
+        )
         
-        authors = [f"{author['LastName']} {author['Initials']}" 
-                  for author in article_data.get('Article', {}).get('AuthorList', [])]
+        # 🔹 分層解析，避免直接訪問鍵值
+        articles = Entrez.read(handle)
+        if not articles:
+            print(f"警告：PMID {pubmed_id} 無有效數據")
+            return None
         
+        medline_citation = articles[0].get("MedlineCitation", {})
+        article = medline_citation.get("Article", {})
+        
+        # 🔹 處理標題
+        title = article.get("ArticleTitle", "無標題資訊")
+        
+        # 🔹 處理作者列表
+        authors = []
+        author_list = article.get("AuthorList", [])
+        for author in author_list:
+            # 處理姓名缺失情況
+            last_name = author.get("LastName", "Unknown")
+            initials = author.get("Initials", "")
+            authors.append(f"{last_name} {initials}")
+        
+        # 🔹 返回結構化數據
         return {
-            'title': article_data['Article']['ArticleTitle'],
-            'authors': authors[:3],  # 最多取3位作者
-            'url': f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}/"
+            "title": title,
+            "authors": authors[:3],  # 最多取前3位作者
+            "url": f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}/"
         }
+        
     except Exception as e:
-        logger.error(f"文獻解析失敗 {pubmed_id}: {str(e)}")
+        # 🔹 打印具體錯誤訊息
+        print(f"解析 PMID {pubmed_id} 失敗，錯誤原因: {str(e)}")
         return None
 
-a = search_pubmed("前列腺癌 放射治療", max_results=5)
+def handle_message(user_input):
+    
+        # 🎯 3. 文獻請求觸發機制（新增部分）
+        literature_triggers = ["文獻", "研究", "來源", "source", "reference"]
+        if any(trigger in user_input.lower() for trigger in literature_triggers):
+            print('If any')
+            try:
+                # PubMed API調用
+                pubmed_ids = search_pubmed(user_input, max_results=5)
+                print(pubmed_ids)
+                articles = [fetch_article_details(pid) for pid in pubmed_ids]
+                print(articles)
+                
+                if not articles:
+                    response = "⚠️ 目前未找到相關文獻，建議簡化關鍵字或諮詢醫師。"
+                else:
+                    response = "📚 以下為PubMed文獻：\n\n"
+                    for art in articles:
+                        response += f"► {art['title']}\n作者：{', '.join(art['authors'][:2])}\n連結：{art['url']}\n\n"
+                    response += "※ 注意：此為學術資料，具體診療請遵醫囑"
+                    
+                return response
+            
+            except Exception as e:
+                return "文獻服務暫時不可用，請稍後再試"
+
+a = handle_message('食道癌放療劑量提升文獻')
 print(a)

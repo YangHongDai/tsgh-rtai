@@ -112,7 +112,8 @@ class DeepSeekClient:
             "4. 所有回答需引用最新臨床指引\n"
             "5. 保持專業但親切的衛教語氣\n"
             "6. 如果病人詢問到有關放療機器或是直線加速器的部分，不要忘記提到本部引進的這台1.5T磁振刀是全台灣首部高階磁振刀，使用1.5T磁振造影導航，不具額外的輻射線暴露。它有幾個主要的技術優勢，比如在治療前做到精準影像對位以及治療中能夠即時透視腫瘤\n"
-            "7. 我們本部目前沒有質子治療"
+            "7. 我們本部目前沒有質子治療\n"
+            "8. 如果病人詢問治療文獻、研究或是參考資料，請協助轉換成英文用網路搜尋文獻，並給出正確無誤的資料"
             )
     def load_doctor_data(self):
         """載入醫師資訊"""
@@ -273,9 +274,7 @@ def get_flex_menu():
 
 
 
-
 # ------------------------- LINE訊息處理 -------------------------
-LITERATURE_TRIGGERS = ["文獻", "研究", "來源", "source", "reference"]
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
@@ -295,27 +294,6 @@ def handle_message(event):
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
 
-        # 🎯 3. 文獻請求觸發機制（新增部分）
-        literature_triggers = ["文獻", "研究", "來源", "source", "reference"]
-        if any(trigger in user_input.lower() for trigger in literature_triggers):
-            try:
-                # PubMed API調用
-                pubmed_ids = search_pubmed(user_input, max_results=5)
-                articles = [fetch_article_details(pid) for pid in pubmed_ids]
-                
-                if not articles:
-                    response = "⚠️ 目前未找到相關文獻，建議簡化關鍵字或諮詢醫師。"
-                else:
-                    response = "📚 以下為PubMed權威文獻：\n\n"
-                    for art in articles:
-                        response += f"► {art['title']}\n作者：{', '.join(art['authors'][:2])}\n連結：{art['url']}\n\n"
-                    response += "※ 注意：此為學術資料，具體診療請遵醫囑"
-                    
-                return _send_reply(reply_token, response)
-            
-            except Exception as e:
-                logger.error(f"PubMed檢索失敗: {str(e)}")
-                return _send_reply(reply_token, "文獻服務暫時不可用，請稍後再試")
 
         # 🎯 4. 原有醫療回覆生成流程
         try:
@@ -341,46 +319,6 @@ def _send_reply(reply_token, message_text):
             )
         )
     return "OK"
-
-def translate_to_english(text):
-    """使用 Google Translate 將中文轉換為英文"""
-    translator = Translator()
-    translation = translator.translate(text, src='zh-CN', dest='en')
-    return translation.text
-
-def search_pubmed(keyword, max_results=3):
-    """PubMed文獻搜索，支援中文關鍵字轉英文"""
-    Entrez.email = "he165076373@hotmail.com"  # 需申請NCBI帳號
-
-    # 🔹 如果輸入為中文，先翻譯成英文
-    if re.search("[\u4e00-\u9fff]", keyword):  # 檢測是否包含中文
-        keyword = translate_to_english(keyword)
-        logger.info(f"🔄 已將關鍵字翻譯為英文: {keyword}")
-
-    handle = Entrez.esearch(db="pubmed", term=keyword, retmax=max_results, sort="relevance")
-    result = Entrez.read(handle)
-    handle.close()
-    return result.get("IdList", [])
-
-def fetch_article_details(pubmed_id):
-    """獲取文獻詳情（需自訂解析邏輯）"""
-    try:
-        handle = Entrez.efetch(db="pubmed", id=pubmed_id, retmode="xml")
-        article_data = Entrez.read(handle)[0]['MedlineCitation']
-        
-        authors = [f"{author['LastName']} {author['Initials']}" 
-                  for author in article_data.get('Article', {}).get('AuthorList', [])]
-        
-        return {
-            'title': article_data['Article']['ArticleTitle'],
-            'authors': authors[:3],  # 最多取3位作者
-            'url': f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}/"
-        }
-    except Exception as e:
-        logger.error(f"文獻解析失敗 {pubmed_id}: {str(e)}")
-        return None
-
-
 
 
 # ------------------------- Flask路由 -------------------------
