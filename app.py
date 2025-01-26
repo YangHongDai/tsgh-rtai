@@ -8,7 +8,7 @@ import time
 from flask import Flask, request
 from diskcache import Cache
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
 
@@ -293,10 +293,10 @@ def handle_message(event):
         
         ###For menu
         if user_input in ["我要諮詢", "諮詢"]:
-            return _send_reply(reply_token, get_flex_menu())
+            return _send_flex_reply(reply_token, get_flex_menu())
 
         if user_input in client.doctor_data:
-            return _send_reply(reply_token, client.get_doctor_info(user_input))
+            return _send_flex_reply(reply_token, client.get_doctor_info(user_input))
 
         # 生成回覆，考慮歷史對話
         try:
@@ -325,6 +325,17 @@ def _send_reply(reply_token, message_text):
         )
     return "OK"
 
+def _send_flex_reply(reply_token, flex_message_content):
+    """發送 Flex Message 選單"""
+    with ApiClient(configuration) as api_client:
+        line_api = MessagingApi(api_client)
+        line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=reply_token,
+                messages=[FlexMessage(alt_text="請選擇您要諮詢的項目", contents=flex_message_content)]
+            )
+        )
+    return "OK"
 # ------------------------- Flask路由 -------------------------
 @app.route("/callback", methods=['POST'])
 def callback():
