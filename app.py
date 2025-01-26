@@ -303,7 +303,7 @@ if __name__ == "__main__":
     # 啟動Flask服務
     app.run(
         host='0.0.0.0',
-        port=8080,
+        port=int(os.environ.get("PORT", 8080)) ,
         threaded=True,
         use_reloader=False
     )
