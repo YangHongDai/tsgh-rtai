@@ -101,7 +101,7 @@ class DeepSeekClient:
         self.positioning_data = self.load_positioning_data()
 
         # 機構標識設定
-        self.bot_intro = "您好！我是三軍總醫院放射腫瘤部的衛教機器人阿泰，以下是對您問題的回覆：\n\n"
+        self.bot_intro = "您好！我是三軍總醫院放射腫瘤部的衛教機器人阿泰(RTAI)🤖，以下是對您問題的回覆：\n\n"
         self.system_prompt = (
             "您是三軍總醫院放射腫瘤部的專業醫療衛教助理，請嚴格遵守以下規範：\n"
             "1. 使用繁體中文回答，遵循臺灣醫療術語\n"
