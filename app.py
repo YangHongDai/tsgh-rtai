@@ -111,7 +111,8 @@ class DeepSeekClient:
             "5. 保持專業但親切的衛教語氣\n"
             "6. 如果病人詢問到有關放療機器或是直線加速器的部分，不要忘記提到本部引進的這台1.5T磁振刀是全台灣首部高階磁振刀，使用1.5T磁振造影導航，不具額外的輻射線暴露。它有幾個主要的技術優勢，比如在治療前做到精準影像對位以及治療中能夠即時透視腫瘤\n"
             "7. 我們本部目前沒有質子治療\n"
-            "8. 如果病人詢問治療'文獻'、'文章'、'研究'或是'參考資料'、'預後'，請翻成英文搜尋近五年PubMed\Cochrane\Web os science，並整合資訊給病人，不要輸出網址、期刊、臨床指引、標題、年份或是作者"
+            "8. 如果病人詢問治療'文獻'、'文章'、'研究'或是'參考資料'、'預後'，請翻成英文搜尋近五年PubMed\Cochrane\Web os science，並整合資訊給病人，不要輸出網址、期刊、臨床指引、標題、年份或是作者\n"
+            "9. 注意你要區分SRT(surface radiotherapy)不等於SBRT (stereotactic body radiotherapy)，一種是治療蟹足腫，一種是治療腫瘤"
             )
 
     def load_doctor_data(self):
@@ -239,34 +240,28 @@ class DeepSeekClient:
 
 # ------------------------- 建立 Flex Message 選單 -------------------------
 
-def get_flex_menu():
+def get_doctor_menu():
+    """動態生成醫師選單"""
+    doctor_buttons = [
+        {
+            "type": "button",
+            "action": {"type": "message", "label": doctor_name, "text": doctor_name},
+            "style": "primary"
+        } for doctor_name in client.doctor_data.keys()
+    ]
+
     return {
         "type": "flex",
-        "altText": "請選擇您要諮詢的項目",
+        "altText": "請選擇醫師查詢的名稱",
         "contents": {
             "type": "bubble",
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "請選擇您要諮詢的類別", "weight": "bold", "size": "lg"},
-                    {"type": "separator"},
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "放射治療副作用", "text": "放射治療副作用"},
-                        "style": "primary"
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "放療技術與設備", "text": "放療技術與設備"},
-                        "style": "primary"
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "預約與門診", "text": "預約與門診"},
-                        "style": "primary"
-                    }
-                ]
+                    {"type": "text", "text": "請選擇醫師名稱", "weight": "bold", "size": "lg"},
+                    {"type": "separator"}
+                ] + doctor_buttons
             }
         }
     }
@@ -281,27 +276,27 @@ def handle_message(event):
         reply_token = event.reply_token
         user_id = event.source.user_id
 
-        # 🎯 1. 優先處理醫師資訊查詢
-        for doctor_name in client.doctor_data.keys():
-            if doctor_name in user_input:
-                doctor_info = client.get_doctor_info(doctor_name)
-                if doctor_info:
-                    return _send_reply(reply_token, doctor_info)
+        # 🎯 1. 觸發醫師選單
+        if user_input == "我想查詢我的放射治療主治醫師。":
+            return _send_flex_reply(reply_token, get_doctor_menu())
 
-        # 🎯 2. 安全檢查（含緊急詞攔截）
+        # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
+        if user_input in client.doctor_data:
+            doctor_info = client.get_doctor_info(user_input)
+            return _send_reply(reply_token, doctor_info)
+
+        # 🎯 3. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
 
-
         # 🎯 4. 原有醫療回覆生成流程
         try:
             response = client.generate_medical_response(user_id, user_input)
+            return _send_reply(reply_token, response)
         except Exception as e:
             logger.error(f"API呼叫異常: {str(e)}")
-            response = f"{client.bot_intro}目前服務繁忙，請稍後再試。急診諮詢請撥(02)8792-3311"
-
-        return _send_reply(reply_token, response)
+            return _send_reply(reply_token, f"{client.bot_intro}目前服務繁忙，請稍後再試。急診諮詢請撥(02)8792-3311")
 
     except Exception as e:
         logger.error(f"訊息處理失敗: {str(e)}")
@@ -319,6 +314,17 @@ def _send_reply(reply_token, message_text):
         )
     return "OK"
 
+def _send_flex_reply(reply_token, flex_content):
+    """發送LINE Flex Message（選單）"""
+    with ApiClient(configuration) as api_client:
+        line_api = MessagingApi(api_client)
+        line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=reply_token,
+                messages=[FlexMessage(alt_text="請選擇醫師名稱", contents=flex_content)]
+            )
+        )
+    return "OK"
 
 # ------------------------- Flask路由 -------------------------
 @app.route("/callback", methods=['POST'])
