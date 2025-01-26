@@ -5,3 +5,4 @@ python-dotenv==1.0.0
 requests>=2.32.3
 gunicorn==21.2.0
 biopython==1.81
+googletrans==4.0.2

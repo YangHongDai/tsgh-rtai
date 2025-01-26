@@ -12,6 +12,8 @@ from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
 from Bio import Entrez
+from googletrans import Translator
+
 
 # ------------------------- 初始化配置 -------------------------
 load_dotenv()
@@ -298,7 +300,7 @@ def handle_message(event):
         if any(trigger in user_input.lower() for trigger in literature_triggers):
             try:
                 # PubMed API調用
-                pubmed_ids = search_pubmed(user_input, max_results=3)
+                pubmed_ids = search_pubmed(user_input, max_results=5)
                 articles = [fetch_article_details(pid) for pid in pubmed_ids]
                 
                 if not articles:
@@ -340,10 +342,21 @@ def _send_reply(reply_token, message_text):
         )
     return "OK"
 
+def translate_to_english(text):
+    """使用 Google Translate 將中文轉換為英文"""
+    translator = Translator()
+    translation = translator.translate(text, src='zh-CN', dest='en')
+    return translation.text
 
 def search_pubmed(keyword, max_results=3):
-    """PubMed文獻搜索"""
+    """PubMed文獻搜索，支援中文關鍵字轉英文"""
     Entrez.email = "he165076373@hotmail.com"  # 需申請NCBI帳號
+
+    # 🔹 如果輸入為中文，先翻譯成英文
+    if re.search("[\u4e00-\u9fff]", keyword):  # 檢測是否包含中文
+        keyword = translate_to_english(keyword)
+        logger.info(f"🔄 已將關鍵字翻譯為英文: {keyword}")
+
     handle = Entrez.esearch(db="pubmed", term=keyword, retmax=max_results, sort="relevance")
     result = Entrez.read(handle)
     handle.close()
