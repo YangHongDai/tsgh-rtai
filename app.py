@@ -292,7 +292,7 @@ def handle_message(event):
             return _send_reply(reply_token, safety_result['message'])
         
         ###For menu
-        if user_input in ["我要諮詢", "諮詢"]:
+        if user_input in ["", ""]:
             return _send_flex_reply(reply_token, get_flex_menu())
 
         if user_input in client.doctor_data:
@@ -307,8 +307,7 @@ def handle_message(event):
 
         return _send_reply(reply_token, response)
 
-        
-
+    
     except Exception as e:
         logger.error(f"訊息處理失敗: {str(e)}")
         return _send_reply(reply_token, "【系統通知】訊息處理異常，已通知工程團隊")
