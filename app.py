@@ -563,7 +563,7 @@ def create_rich_menu_2():
 
         line_bot_api.set_default_rich_menu(rich_menu_id)
 
-create_rich_menu_2()
+#create_rich_menu_2()
 
 client = DeepSeekClient()  # ✅ 提前初始化
 
