@@ -347,6 +347,7 @@ def handle_postback(event: PostbackEvent):
         send_doctor_list(event.reply_token)
     elif data == "action=cancer_education":
         send_cancer_menu(event.reply_token)  # 呼叫新版癌症選單
+
 def send_cancer_menu(reply_token):
     """發送癌症衛教連結選單 (使用 Flex Message)"""
     cancer_flex = {
@@ -431,6 +432,7 @@ def send_doctor_list(reply_token):
                 )]
             )
         )
+
 def _send_reply(reply_token, message_text):
     """發送LINE回覆"""
     with ApiClient(configuration) as api_client:
@@ -457,7 +459,7 @@ def _send_flex_reply(reply_token, flex_content):
 
 # ------------------------- 圖文選單優化版 -------------------------
 def create_rich_menu():
-    """整合版圖文選單建立函數"""
+    """整合版圖文選單建立函數（根據 create_rich_menu_2 邏輯改寫）"""
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         
@@ -478,13 +480,13 @@ def create_rich_menu():
 
         line_bot_blob_api = MessagingApiBlob(api_client)
 
-        # 區域功能配置
+        # 區域功能配置（根據 create_rich_menu_2 結構調整）
         menu_config = {
             "A": {
                 "type": "uri",
                 "label": "本部團隊",
                 "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/Doclist/191/10026/25014",
-                "bounds": (0, 0, 833, 843)
+                "bounds": (0, 0, 833, 843)  # x, y, width, height
             },
             "B": {
                 "type": "postback",
@@ -496,7 +498,7 @@ def create_rich_menu():
                 "type": "uri",
                 "label": "定位流程",
                 "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22861",
-                "bounds": (1663, 0, 834, 843)
+                "bounds": (1663, 0, 834, 843)  # 修正寬度為834
             },
             "D": {
                 "type": "uri",
@@ -514,49 +516,66 @@ def create_rich_menu():
                 "type": "postback",
                 "label": "癌症衛教",
                 "data": "action=cancer_education",
-                "bounds": (1662, 843, 838, 843)
+                "bounds": (1662, 843, 838, 843)  # 修正寬度為838
             }
         }
 
-        # 動態生成區域
+        # 動態生成區域（改用更嚴謹的 bounds 驗證）
         areas = []
+        total_width = 2500
+        total_height = 1686
+        
         for key in "ABCDEF":
             config = menu_config[key]
+            x, y, width, height = config["bounds"]
+            
+            # 驗證區域範圍
+            if x + width > total_width or y + height > total_height:
+                logger.error(f"區域 {key} 超出畫面範圍！")
+                continue
+
             action = (
                 URIAction(uri=config["uri"]) if config["type"] == "uri"
                 else PostbackAction(data=config["data"])
             )
+            
             areas.append(RichMenuArea(
                 bounds=RichMenuBounds(
-                    x=config["bounds"][0],
-                    y=config["bounds"][1],
-                    width=config["bounds"][2],
-                    height=config["bounds"][3]
+                    x=x,
+                    y=y,
+                    width=width,
+                    height=height
                 ),
                 action=action
             ))
 
-        # 建立圖文選單
+        # 建立圖文選單（使用更嚴謹的尺寸驗證）
         rich_menu = RichMenuRequest(
-            size=RichMenuSize(width=2500, height=1686),
+            size=RichMenuSize(width=total_width, height=total_height),
             selected=True,
             name="智慧醫療圖文選單",
             chat_bar_text="點選主選單或輸入想詢問事項",
             areas=areas
         )
 
-        rich_menu_id = line_bot_api.create_rich_menu(rich_menu).rich_menu_id
-        
-        # 上傳合成圖片（需預先準備）
-        with open('./static/richmenu-template-guidem-01.png', 'rb') as image:
-            line_bot_blob_api.set_rich_menu_image(
-                rich_menu_id=rich_menu_id,
-                body=bytearray(image.read()),
-                _headers={'Content-Type': 'image/png'}
-            )
+        try:
+            # 創建選單並上傳圖片
+            rich_menu_id = line_bot_api.create_rich_menu(rich_menu_request=rich_menu).rich_menu_id
+            
+            # 上傳圖片（改用 create_rich_menu_2 的檔案路徑）
+            with open('static/richmenu-template-guidem-01.png', 'rb') as image:  # 修改路徑並改用 jpg
+                line_bot_blob_api.set_rich_menu_image(
+                    rich_menu_id=rich_menu_id,
+                    body=bytearray(image.read()),
+                    _headers={'Content-Type': 'image/png'}  # 修正 Content-Type
+                )
 
-        line_bot_api.set_default_rich_menu(rich_menu_id)
-        logger.info("圖文選單建立完成，ID: %s", rich_menu_id)
+            line_bot_api.set_default_rich_menu(rich_menu_id)
+            logger.info(f"圖文選單建立完成，ID: {rich_menu_id}")
+            
+        except Exception as e:
+            logger.error(f"圖文選單建立失敗: {str(e)}")
+            raise
 
 # ------------------------- Flask路由 -------------------------
 @app.route("/callback", methods=['POST'])
