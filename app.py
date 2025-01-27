@@ -8,8 +8,8 @@ import time
 from flask import Flask, request
 from diskcache import Cache
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction, URIAction
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction, URIAction,PushMessageRequest,ReplyMessageRequest
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 from dotenv import load_dotenv
 
 
@@ -279,8 +279,6 @@ def get_doctor_menu():
         "type": "carousel",
         "contents": bubbles
     }
-
-
 
 # ------------------------- LINE訊息處理 -------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
