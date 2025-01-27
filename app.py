@@ -8,7 +8,7 @@ import time
 from flask import Flask, request
 from diskcache import Cache
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction, URIAction
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
 
@@ -374,7 +374,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='AA')
+                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/Doclist/191/10026/25014')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -383,7 +383,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='BB')
+                action=MessageAction(text='BA')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -392,7 +392,7 @@ def create_rich_menu_1():
                     width=834,
                     height=843
                 ),
-                action=MessageAction(text='CC')
+                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22861')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -401,7 +401,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='DD')
+                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/26935')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -410,7 +410,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='EE')
+                action=URIAction(uri='https://www2.ndmctsgh.edu.tw/newwebreg/Register/Doctors?pos=B&DeptCode=312&DeptGroup=4')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -419,7 +419,7 @@ def create_rich_menu_1():
                     width=834,
                     height=843
                 ),
-                action=MessageAction(text='FF')
+                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22863')
             )
         ]
 
@@ -563,7 +563,7 @@ def create_rich_menu_2():
 
         line_bot_api.set_default_rich_menu(rich_menu_id)
 
-#create_rich_menu_2()
+create_rich_menu_2()
 
 client = DeepSeekClient()  # ✅ 提前初始化
 
