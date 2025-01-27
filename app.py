@@ -8,24 +8,8 @@ import time
 from flask import Flask, request
 from diskcache import Cache
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (
-    Configuration, 
-    ApiClient, 
-    MessagingApi, 
-    ReplyMessageRequest, 
-    TextMessage, FlexMessage, 
-    MessagingApiBlob, 
-    RichMenuSize, 
-    RichMenuRequest, 
-    RichMenuArea, 
-    RichMenuBounds, 
-    MessageAction,
-    QuickReply,
-    QuickReplyItem,
-    PostbackAction,
-    ReplyMessageRequest,
-    URIAction)
-from linebot.v3.webhooks import MessageEvent, TextMessageContent, PostbackEvent
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
 
 
@@ -130,8 +114,7 @@ class DeepSeekClient:
             "7. 我們本部目前沒有質子治療\n"
             "8. 如果病人詢問治療'文獻'、'文章'、'研究'或是'參考資料'、'預後'，請翻成英文搜尋近五年PubMed\Cochrane\Web os science，並整合資訊給病人，不要輸出網址、期刊、臨床指引、標題、年份或是作者\n"
             "9. 注意你要區分SRT(surface radiotherapy)不等於SBRT (stereotactic body radiotherapy)，一種是治療蟹足腫，一種是治療腫瘤"
-            "10. 如果病人詢問某癌症該找哪位主治醫師，請不要給出答案 (有些醫師根本不在本院)，而是請他利用本line機器人選單查詢醫師資訊"
-        )
+            "10. 如果病人詢問某癌症該找哪位主治醫師，請不要給出答案 (有些醫師根本不在本院)，而是請他利用本line機器人選單查詢醫師資訊")
 
     def load_doctor_data(self):
         """載入醫師資訊"""
@@ -144,18 +127,15 @@ class DeepSeekClient:
     
     def get_doctor_info(self, doctor_name):
         """查詢醫師資訊"""
-        # 增強姓名匹配邏輯（支援包含「醫師」稱謂）
-        clean_name = doctor_name.replace("醫師", "").strip()
-        doctor_info = self.doctor_data.get(clean_name)
+        doctor_info = self.doctor_data.get(doctor_name)
         if doctor_info:
-            return f"🔹 {clean_name} 醫師資訊：\n\n" \
+            return f"🔹 {doctor_name} 醫師資訊：\n\n" \
                    f"📖 **簡介**：{doctor_info['簡介']}\n\n" \
                    f"📌 **專長**：{doctor_info['專長']}\n\n" \
                    f"🕒 **門診時間**：{doctor_info['門診時間']}\n\n" \
                    f"🖥️ **網路掛號連結**：\nhttps://www2.ndmctsgh.edu.tw/newwebreg/Register/Doctors?pos=B&DeptCode=312&DeptGroup=4"
         else:
             return None
-
     def load_positioning_data(self):
         """載入放射治療定位相關資料"""
         try:
@@ -196,13 +176,14 @@ class DeepSeekClient:
         messages.append({"role": "user", "content": user_input})
         
 
+
         payload = {
-            "model": "deepseek-chat",
-            "messages": messages,
-            "temperature": 0.1,
-            "max_tokens": 512,
-            "top_p": 0.9
-        }
+    "model": "deepseek-chat",
+    "messages": messages,  # ✅ 這裡要包含完整的歷史對話
+    "temperature": 0.1,
+    "max_tokens": 512,
+    "top_p": 0.9
+}
         
         for attempt in range(max_retries):
             try:
@@ -259,6 +240,7 @@ class DeepSeekClient:
         return response[:1500]
 
 # ------------------------- 建立 Flex Message 選單 -------------------------
+# ------------------------- 修正後的 Flex Message 選單 -------------------------
 def get_doctor_menu():
     """動態生成醫師選單（符合 LINE Flex Message 規範）"""
     bubbles = []
@@ -273,7 +255,7 @@ def get_doctor_menu():
                 "action": {
                     "type": "message",
                     "label": doctor,
-                    "text": f"{doctor}醫師"  # 增加醫師稱謂提升識別度
+                    "text": doctor
                 },
                 "style": "primary",
                 "margin": "md"
@@ -298,6 +280,8 @@ def get_doctor_menu():
         "contents": bubbles
     }
 
+
+
 # ------------------------- LINE訊息處理 -------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -317,17 +301,17 @@ def handle_message(event):
                 doctor_info = client.get_doctor_info(doctor_name)
                 return _send_reply(reply_token, doctor_info)
 
-        # 🎯 3. 直接匹配醫師姓名
+        # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
         if user_input in client.doctor_data:
             doctor_info = client.get_doctor_info(user_input)
             return _send_reply(reply_token, doctor_info)
 
-        # 🎯 4. 安全檢查（含緊急詞攔截）
+        # 🎯 3. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
 
-        # 🎯 5. 原有醫療回覆生成流程
+        # 🎯 4. 原有醫療回覆生成流程
         try:
             response = client.generate_medical_response(user_id, user_input)
             return _send_reply(reply_token, response)
@@ -338,100 +322,6 @@ def handle_message(event):
     except Exception as e:
         logger.error(f"訊息處理失敗: {str(e)}")
         return _send_reply(reply_token, "【系統通知】訊息處理異常，已通知工程團隊")
-
-@handler.add(PostbackEvent)
-def handle_postback(event: PostbackEvent):
-    """處理圖文選單的Postback事件"""
-    data = event.postback.data
-    if data == "action=doctor_list":
-        send_doctor_list(event.reply_token)
-    elif data == "action=cancer_education":
-        send_cancer_menu(event.reply_token)  # 呼叫新版癌症選單
-
-def send_cancer_menu(reply_token):
-    """發送癌症衛教連結選單 (使用 Flex Message)"""
-    cancer_flex = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "癌症衛教資源",
-                    "weight": "bold",
-                    "size": "xl",
-                    "align": "center"
-                },
-                {
-                    "type": "separator",
-                    "margin": "md"
-                },
-                {
-                    "type": "button",
-                    "action": {
-                        "type": "uri",
-                        "label": "乳癌衛教",
-                        "uri": "https://www.example.com/breast-cancer"
-                    },
-                    "style": "primary",
-                    "margin": "md"
-                },
-                {
-                    "type": "button",
-                    "action": {
-                        "type": "uri",
-                        "label": "肺癌衛教",
-                        "uri": "https://www.example.com/lung-cancer"
-                    },
-                    "style": "primary",
-                    "margin": "md"
-                },
-                {
-                    "type": "button",
-                    "action": {
-                        "type": "uri",
-                        "label": "大腸癌衛教",
-                        "uri": "https://www.example.com/colon-cancer"
-                    },
-                    "style": "primary",
-                    "margin": "md"
-                }
-            ]
-        }
-    }
-
-    with ApiClient(configuration) as api_client:
-        messaging_api = MessagingApi(api_client)
-        messaging_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[FlexMessage(alt_text="癌症衛教資源選單", contents=cancer_flex)]
-            )
-        )
-
-def send_doctor_list(reply_token):
-    """傳送醫師快速選單 (v3 正確寫法)"""
-    items = [
-        QuickReplyItem(
-            action=MessageAction(
-                label=doctor,
-                text=doctor
-            )
-        ) for doctor in client.doctor_data.keys()
-    ]
-
-    with ApiClient(configuration) as api_client:
-        messaging_api = MessagingApi(api_client)
-        messaging_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(
-                    text="請選擇主治醫師：",
-                    quick_reply=QuickReply(items=items)
-                )]
-            )
-        )
 
 def _send_reply(reply_token, message_text):
     """發送LINE回覆"""
@@ -457,128 +347,6 @@ def _send_flex_reply(reply_token, flex_content):
         )
     return "OK"
 
-# ------------------------- 圖文選單優化版 -------------------------
-def create_rich_menu():
-    """整合版圖文選單建立函數（根據 create_rich_menu_2 邏輯改寫）"""
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        
-        # 🔥 先清除所有舊選單 (關鍵修正)
-        try:
-            # 刪除現有預設選單
-            default_id = line_bot_api.get_default_rich_menu().rich_menu_id
-            line_bot_api.delete_rich_menu(default_id)
-            logger.info(f"已刪除舊預設選單: {default_id}")
-        except Exception as e:
-            logger.warning(f"無預設選單可刪除: {str(e)}")
-
-        # 刪除所有現存選單 (避免殘留)
-        rich_menus = line_bot_api.get_rich_menu_list()
-        for menu in rich_menus:
-            line_bot_api.delete_rich_menu(menu.rich_menu_id)
-            logger.info(f"已刪除殘留選單: {menu.rich_menu_id}")
-
-        line_bot_blob_api = MessagingApiBlob(api_client)
-
-        # 區域功能配置（根據 create_rich_menu_2 結構調整）
-        menu_config = {
-            "A": {
-                "type": "uri",
-                "label": "本部團隊",
-                "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/Doclist/191/10026/25014",
-                "bounds": (0, 0, 833, 843)  # x, y, width, height
-            },
-            "B": {
-                "type": "postback",
-                "label": "醫師資訊",
-                "data": "action=doctor_list",
-                "bounds": (834, 0, 833, 843)
-            },
-            "C": {
-                "type": "uri",
-                "label": "定位流程",
-                "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22861",
-                "bounds": (1663, 0, 834, 843)  # 修正寬度為834
-            },
-            "D": {
-                "type": "uri",
-                "label": "機器介紹",
-                "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/26935",
-                "bounds": (0, 843, 833, 843)
-            },
-            "E": {
-                "type": "uri",
-                "label": "網路掛號",
-                "uri": "https://www2.ndmctsgh.edu.tw/newwebreg/Register/Doctors?pos=B&DeptCode=312&DeptGroup=4",
-                "bounds": (834, 843, 833, 843)
-            },
-            "F": {
-                "type": "postback",
-                "label": "癌症衛教",
-                "data": "action=cancer_education",
-                "bounds": (1662, 843, 838, 843)  # 修正寬度為838
-            }
-        }
-
-        # 動態生成區域（改用更嚴謹的 bounds 驗證）
-        areas = []
-        total_width = 2500
-        total_height = 1686
-        
-        for key in "ABCDEF":
-            config = menu_config[key]
-            x, y, width, height = config["bounds"]
-            
-            # 驗證區域範圍
-            if x + width > total_width or y + height > total_height:
-                logger.error(f"區域 {key} 超出畫面範圍！")
-                continue
-
-            action = (
-                URIAction(uri=config["uri"]) if config["type"] == "uri"
-                else PostbackAction(data=config["data"])
-            )
-            
-            areas.append(RichMenuArea(
-                bounds=RichMenuBounds(
-                    x=x,
-                    y=y,
-                    width=width,
-                    height=height
-                ),
-                action=action
-            ))
-        response = requests.post('https://api.line.me/v2/bot/richmenu', headers=headers, data=json.dumps(body).encode('utf-8'))
-        response = response.json()
-        print(response)
-        # 建立圖文選單（使用更嚴謹的尺寸驗證）
-        rich_menu = RichMenuRequest(
-            size=RichMenuSize(width=total_width, height=total_height),
-            selected=True,
-            name="智慧醫療圖文選單",
-            chat_bar_text="點選主選單或輸入想詢問事項",
-            areas=areas
-        )
-
-        try:
-            # 創建選單並上傳圖片
-            rich_menu_id = line_bot_api.create_rich_menu(rich_menu_request=rich_menu).rich_menu_id
-            
-            # 上傳圖片（改用 create_rich_menu_2 的檔案路徑）
-            with open('static/richmenu-template-guidem-01.png', 'rb') as image:  # 修改路徑並改用 jpg
-                line_bot_blob_api.set_rich_menu_image(
-                    rich_menu_id=rich_menu_id,
-                    body=bytearray(image.read()),
-                    _headers={'Content-Type': 'image/png'}  # 修正 Content-Type
-                )
-
-            line_bot_api.set_default_rich_menu(rich_menu_id)
-            logger.info(f"圖文選單建立完成，ID: {rich_menu_id}")
-            
-        except Exception as e:
-            logger.error(f"圖文選單建立失敗: {str(e)}")
-            raise
-
 # ------------------------- Flask路由 -------------------------
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -593,22 +361,216 @@ def callback():
     
     return "OK"
 
+def create_rich_menu_1():
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_blob_api = MessagingApiBlob(api_client)
+
+        areas = [
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=0,
+                    y=0,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='AA')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=834,
+                    y=0,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='BB')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=1663,
+                    y=0,
+                    width=834,
+                    height=843
+                ),
+                action=MessageAction(text='CC')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=0,
+                    y=843,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='DD')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=834,
+                    y=843,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='EE')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=1662,
+                    y=843,
+                    width=834,
+                    height=843
+                ),
+                action=MessageAction(text='FF')
+            )
+        ]
+
+        rich_menu_to_create = RichMenuRequest(
+            size=RichMenuSize(
+                width=2500,
+                height=1686,
+            ),
+            selected=True,
+            name="圖文選單1",
+            chat_bar_text="查看更多資訊",
+            areas=areas
+        )
+
+        rich_menu_id = line_bot_api.create_rich_menu(
+            rich_menu_request=rich_menu_to_create
+        ).rich_menu_id
+
+        with open('./static/richmenu-template-guidem-01-a.png', 'rb') as image:
+            line_bot_blob_api.set_rich_menu_image(
+                rich_menu_id=rich_menu_id,
+                body=bytearray(image.read()),
+                _headers={'Content-Type': 'image/png'}
+            )
+
+        line_bot_api.set_default_rich_menu(rich_menu_id)
+
+
+def create_rich_menu_2():
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_blob_api = MessagingApiBlob(api_client)
+
+        # Create rich menu
+        headers = {
+            'Authorization': 'Bearer ' + LINE_CHANNEL_TOKEN,
+            'Content-Type': 'application/json'
+        }
+        body = {
+            "size": {
+                "width": 2500,
+                "height": 1686
+            },
+            "selected": True,
+            "name": "圖文選單 1",
+            "chatBarText": "查看更多資訊",
+            "areas": [
+                {
+                    "bounds": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "A"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 834,
+                        "y": 0,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "B"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 1663,
+                        "y": 0,
+                        "width": 834,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "C"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 0,
+                        "y": 843,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "D"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 834,
+                        "y": 843,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "E"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 1662,
+                        "y": 843,
+                        "width": 838,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "F"
+                    }
+                }
+            ]
+        }
+
+        response = requests.post('https://api.line.me/v2/bot/richmenu', headers=headers, data=json.dumps(body).encode('utf-8'))
+        response = response.json()
+        print(response)
+        rich_menu_id = response["richMenuId"]
+        
+        # Upload rich menu image
+        with open('static/richmenu-template-guidem-01.png', 'rb') as image:
+            line_bot_blob_api.set_rich_menu_image(
+                rich_menu_id=rich_menu_id,
+                body=bytearray(image.read()),
+                _headers={'Content-Type': 'image/png'}
+            )
+
+        line_bot_api.set_default_rich_menu(rich_menu_id)
+
+create_rich_menu_2()
+
+client = DeepSeekClient()  # ✅ 提前初始化
+
 # ------------------------- 服務啟動 -------------------------
 if __name__ == "__main__":
-    # 初始化圖文選單
-    try:
-        create_rich_menu()
-        logger.info("圖文選單初始化完成")
-    except Exception as e:
-        logger.error("圖文選單建立失敗: %s", str(e))
-
-    # 啟動服務
+    # 初始化客戶端
     logger.info("系統初始化完成 - 三軍總醫院放射腫瘤部衛教機器人阿泰 已上線")
+    
+    # 啟動Flask服務
     app.run(
         host='0.0.0.0',
-        port=int(os.environ.get("PORT", 8080)),
+        port=int(os.environ.get("PORT", 8080)) ,
         threaded=True,
         use_reloader=False
     )
 
-client = DeepSeekClient()
