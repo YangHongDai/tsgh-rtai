@@ -306,6 +306,16 @@ def handle_message(event):
         reply_token = event.reply_token
         user_id = event.source.user_id
 
+        # 🎯 1. 觸發醫師選單（增強匹配邏輯）
+        if user_input.lower() in ["醫師資訊", "查醫師", "主治醫師"]:
+            return _send_flex_reply(reply_token, get_doctor_menu())
+
+        # 🎯 2. 處理醫師名稱查詢（支援含「醫師」稱謂）
+        if "醫師" in user_input:
+            doctor_name = user_input.replace("醫師", "").strip()
+            if doctor_name in client.doctor_data:
+                doctor_info = client.get_doctor_info(doctor_name)
+                return _send_reply(reply_token, doctor_info)
 
         # 🎯 3. 直接匹配醫師姓名
         if user_input in client.doctor_data:
@@ -450,6 +460,22 @@ def create_rich_menu():
     """整合版圖文選單建立函數"""
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
+        
+        # 🔥 先清除所有舊選單 (關鍵修正)
+        try:
+            # 刪除現有預設選單
+            default_id = line_bot_api.get_default_rich_menu().rich_menu_id
+            line_bot_api.delete_rich_menu(default_id)
+            logger.info(f"已刪除舊預設選單: {default_id}")
+        except Exception as e:
+            logger.warning(f"無預設選單可刪除: {str(e)}")
+
+        # 刪除所有現存選單 (避免殘留)
+        rich_menus = line_bot_api.get_rich_menu_list()
+        for menu in rich_menus:
+            line_bot_api.delete_rich_menu(menu.rich_menu_id)
+            logger.info(f"已刪除殘留選單: {menu.rich_menu_id}")
+
         line_bot_blob_api = MessagingApiBlob(api_client)
 
         # 區域功能配置
