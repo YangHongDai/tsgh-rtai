@@ -291,15 +291,15 @@ def handle_message(event):
         user_id = event.source.user_id
 
         # 🎯 1. 觸發醫師選單（增強匹配邏輯）
-        if user_input.lower() in ["醫師資訊", "查醫師", "主治醫師"]:
-            return _send_flex_reply(reply_token, get_doctor_menu())
+        #if user_input.lower() in ["醫師資訊", "查醫師", "主治醫師"]:
+        #    return _send_flex_reply(reply_token, get_doctor_menu())
 
         # 🎯 2. 處理醫師名稱查詢（支援含「醫師」稱謂）
-        if "醫師" in user_input:
-            doctor_name = user_input.replace("醫師", "").strip()
-            if doctor_name in client.doctor_data:
-                doctor_info = client.get_doctor_info(doctor_name)
-                return _send_reply(reply_token, doctor_info)
+        #if "醫師" in user_input:
+        #    doctor_name = user_input.replace("醫師", "").strip()
+        #   if doctor_name in client.doctor_data:
+        #       doctor_info = client.get_doctor_info(doctor_name)
+        #       return _send_reply(reply_token, doctor_info)
 
         # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
         if user_input in client.doctor_data:
