@@ -438,7 +438,7 @@ def create_rich_menu_1():
             rich_menu_request=rich_menu_to_create
         ).rich_menu_id
 
-        with open('./static/test.png', 'rb') as image:
+        with open('./static/menu_logo.png', 'rb') as image:
             line_bot_blob_api.set_rich_menu_image(
                 rich_menu_id=rich_menu_id,
                 body=bytearray(image.read()),
@@ -554,7 +554,7 @@ def create_rich_menu_2():
         rich_menu_id = response["richMenuId"]
         
         # Upload rich menu image
-        with open('static/test.png', 'rb') as image:
+        with open('static/menu_logo.png', 'rb') as image:
             line_bot_blob_api.set_rich_menu_image(
                 rich_menu_id=rich_menu_id,
                 body=bytearray(image.read()),
