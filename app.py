@@ -383,7 +383,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='BA')
+                action=MessageAction(text='我想要查詢醫師相關資訊。')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -490,7 +490,7 @@ def create_rich_menu_2():
                     "action": {
                         "type": "message",
                         "label": "醫師資訊",
-                        "text": "BA"
+                        "text": "我想要查詢醫師相關資訊。"
                     }
                 },
                 {
