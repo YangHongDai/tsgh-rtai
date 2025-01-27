@@ -95,14 +95,18 @@ class DeepSeekClient:
         self.safety_check = MedicalSafety()
         self.logger = logging.getLogger('DeepSeekClient')
         self.cache = Cache("chat_memory")
-        # 讀取醫師資訊
-        self.doctor_data = self.load_doctor_data()
-        # 讀取放射治療定位相關資料
+
+        # 🧬 新增醫療服務配置
+        self.registration_keywords = ["挂号", "掛號", "預約", "門診", "看診"]
+        self.title_suffixes = ["医师", "医生", "醫師", "大夫", "主任", "醫生"]
+
+        # 讀取資料
+        self.doctor_data = self.load_doctor_data()  # 🧬 修改後的載入方法
         self.positioning_data = self.load_positioning_data()
 
         # 機構標識設定
         self.bot_intro = "您好！我是三軍總醫院放射腫瘤部的衛教機器人阿泰(RTAI)🤖，以下是對您問題的回覆：\n\n"
-        self.system_prompt = (
+        self.system_prompt = self.system_prompt = (
             "您是三軍總醫院放射腫瘤部的專業醫療衛教助理，請嚴格遵守以下規範：\n"
             "1. 使用繁體中文回答，遵循臺灣醫療術語\n"
             "2. 涉及放射線治療問題時，需說明可能副作用與照護要點\n"
@@ -115,15 +119,86 @@ class DeepSeekClient:
             "9. 注意你要區分SRT(surface radiotherapy)不等於SBRT (stereotactic body radiotherapy)，一種是治療蟹足腫，一種是治療腫瘤"
             )
 
+    # 🧬 修改後的醫師資料載入方法
     def load_doctor_data(self):
-        """載入醫師資訊"""
+        """載入醫師資訊並生成別名"""
         try:
             with open("doctor_info.json", "r", encoding="utf-8") as file:
-                return json.load(file)
+                doctor_data = json.load(file)
+                
+                for name, info in doctor_data.items():
+                    full_name = str(name).strip()
+                    aliases = []
+                    
+                    # 生成識別別名
+                    parts = full_name.split()
+                    if parts:
+                        surname = parts[0][0]  # 取姓氏第一個字
+                        for suffix in self.title_suffixes:
+                            aliases.append(f"{surname}{suffix}")
+                            aliases.append(f"{full_name}{suffix}")
+                            
+                    aliases.append(full_name)
+                    info["aliases"] = list(set(aliases))
+                
+                return doctor_data
         except Exception as e:
             self.logger.error(f"載入醫師資訊失敗: {e}")
-            return {}    
-    
+            return {}
+
+    def load_positioning_data(self):
+        """載入放射治療定位相關資料"""
+        try:
+            with open("radiotherapy_positioning.json", "r", encoding="utf-8") as file:
+                return json.load(file)
+        except Exception as e:
+            self.logger.error(f"載入放射治療定位資料失敗: {e}")
+            return {}
+
+    # 🧬 新增醫療特徵檢測方法
+    def detect_medical_mentions(self, user_input):
+        """檢測醫療相關特徵"""
+        result = {
+            "doctors": [],
+            "needs_registration": False
+        }
+        
+        # 檢測醫師稱謂
+        for doctor_name, info in self.doctor_data.items():
+            for alias in info.get("aliases", []):
+                if alias in user_input:
+                    result["doctors"].append(doctor_name)
+                    break
+        
+        # 檢測掛號關鍵字
+        lower_input = user_input.lower()
+        result["needs_registration"] = any(
+            kw in lower_input for kw in [k.lower() for k in self.registration_keywords]
+        )
+        
+        return result
+
+    # 🧬 新增醫療資訊構建方法
+    def build_medical_response(self, detection_result):
+        """構建醫療相關回應"""
+        response = ""
+        
+        if detection_result["doctors"]:
+            response += "🏥 **相關醫師資訊**：\n\n"
+            for doctor in list(set(detection_result["doctors"])):  # 去重
+                info = self.get_doctor_info(doctor)
+                if info:
+                    response += info + "\n\n"
+                    
+        if detection_result["needs_registration"]:
+            response += "📅 **掛號服務**：\n"
+            response += "1. 放射腫瘤部網路掛號系統：\n"
+            response += "   https://www2.ndmctsgh.edu.tw/newwebreg/Register/Doctors?pos=B&DeptCode=312&DeptGroup=4\n"
+            response += "2. 人工掛號專線：(02)8792-3311 轉分機 12345\n"
+            response += "3. 現場掛號：門診大樓1號櫃台\n\n"
+            
+        return response
+
     def get_doctor_info(self, doctor_name):
         """查詢醫師資訊"""
         doctor_info = self.doctor_data.get(doctor_name)
@@ -135,54 +210,56 @@ class DeepSeekClient:
                    f"🖥️ **網路掛號連結**：\nhttps://www2.ndmctsgh.edu.tw/newwebreg/Register/Doctors?pos=B&DeptCode=312&DeptGroup=4"
         else:
             return None
-    def load_positioning_data(self):
-        """載入放射治療定位相關資料"""
-        try:
-            with open("radiotherapy_positioning.json", "r", encoding="utf-8") as file:
-                return json.load(file)
-        except Exception as e:
-            self.logger.error(f"載入放射治療定位資料失敗: {e}")
-            return {}
 
     def generate_medical_response(self, user_id, user_input, max_retries=MAX_RETRIES):
         """生成醫療回答"""
+        # 🧬 新增前置檢測流程
+        # 1. 安全檢查
+        if not self.safety_check.validate(user_input):
+            return self.bot_intro + "您的問題涉及專業醫療建議，建議直接諮詢主治醫師。"
+            
+        # 2. 快取檢查
+        cached = self.cache.get(user_input)
+        if cached:
+            return self.bot_intro + cached
+            
+        # 3. 醫療特徵檢測
+        detection = self.detect_medical_mentions(user_input)
+        medical_response = self.build_medical_response(detection)
+        if medical_response:
+            final_response = self.bot_intro + medical_response
+            self.cache.set(user_input, final_response)
+            return final_response
+
+        # 以下為原有API調用流程
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        # 讀取使用者的歷史對話紀錄
         history = self.cache.get(user_id, [])
-
-        # 限制歷史對話只保留最近 5 條
         if len(history) > 5:
             history = history[-5:]
 
-        # 1️⃣ **檢查是否詢問放射治療定位**
         positioning_context = ""
         for keyword, content in self.positioning_data.items():
             if keyword in user_input:
                 positioning_context += f"{keyword}：{content}\n"
-                
 
-        # 2️⃣ **構建系統提示詞 (System Message)**
         system_prompt = self.system_prompt
         if positioning_context:
             system_prompt += f"\n\n此外，以下是放射治療定位的專家建議，請根據這些內容回答病人問題：\n{positioning_context}"
             system_prompt += f"\n\n注意定位本部定位的時候只有用電腦斷層，沒有使用到MRI與PET"
 
-        # 組合對話上下文
         messages = [{"role": "system", "content": system_prompt}] + history
         messages.append({"role": "user", "content": user_input})
-        
-
 
         payload = {
-    "model": "deepseek-chat",
-    "messages": messages,  # ✅ 這裡要包含完整的歷史對話
-    "temperature": 0.1,
-    "max_tokens": 512,
-    "top_p": 0.9
-}
+            "model": "deepseek-chat",
+            "messages": messages,
+            "temperature": 0.1,
+            "max_tokens": 512,
+            "top_p": 0.9
+        }
         
         for attempt in range(max_retries):
             try:
@@ -200,15 +277,10 @@ class DeepSeekClient:
                 
                 raw_response = result["choices"][0]["message"]["content"]
                 
-                # 記錄對話歷史
                 history.append({"role": "user", "content": user_input})
                 history.append({"role": "assistant", "content": raw_response})
-
-                # 更新快取
                 self.cache.set(user_id, history, expire=CACHE_TTL)
 
-
-                # 後處理
                 processed_response = self._post_process(raw_response)
                 return f"{self.bot_intro}{processed_response}"
                 
@@ -228,24 +300,17 @@ class DeepSeekClient:
     
     def _post_process(self, response):
         """響應後處理"""
-        # 移除Markdown格式
         response = re.sub(r"\*\*|\#\#|```", "", response)
-        
-        # 添加標準免責聲明
         if "※" not in response:
             response += "\n\n※ 本回覆僅供衛教參考，具體診療請以三軍總醫院醫療團隊評估為準"
-            
-        # 符合LINE訊息長度限制
         return response[:1500]
 
 # ------------------------- 建立 Flex Message 選單 -------------------------
-# ------------------------- 修正後的 Flex Message 選單 -------------------------
 def get_doctor_menu():
     """動態生成醫師選單（符合 LINE Flex Message 規範）"""
     bubbles = []
     doctors = list(client.doctor_data.keys())
     
-    # 每頁最多 10 個按鈕，自動分頁
     for i in range(0, len(doctors), 10):
         page_doctors = doctors[i:i+10]
         buttons = [
@@ -279,8 +344,6 @@ def get_doctor_menu():
         "contents": bubbles
     }
 
-
-
 # ------------------------- LINE訊息處理 -------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -289,22 +352,24 @@ def handle_message(event):
         reply_token = event.reply_token
         user_id = event.source.user_id
 
-        # 🎯 1. 觸發醫師選單
-        if user_input == "我想查詢我的放射治療主治醫師":
-            logger.debug("進入選單觸發條件") 
-            return _send_flex_reply(reply_token, get_doctor_menu())
+        # 🧬 增強醫療特徵檢測
+        detection = client.detect_medical_mentions(user_input)
+        if detection["doctors"] or detection["needs_registration"]:
+            response = client.build_medical_response(detection)
+            return _send_reply(reply_token, client.bot_intro + response)
 
-        # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
+        # 原有處理流程
+        if user_input == "我想查詢我的放射治療主治醫師":
+            return _send_flex_reply(reply_token, get_doctor_menu())
+            
         if user_input in client.doctor_data:
             doctor_info = client.get_doctor_info(user_input)
             return _send_reply(reply_token, doctor_info)
 
-        # 🎯 3. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
 
-        # 🎯 4. 原有醫療回覆生成流程
         try:
             response = client.generate_medical_response(user_id, user_input)
             return _send_reply(reply_token, response)
@@ -354,16 +419,13 @@ def callback():
     
     return "OK"
 
-client = DeepSeekClient()  # ✅ 提前初始化
+client = DeepSeekClient()
 # ------------------------- 服務啟動 -------------------------
 if __name__ == "__main__":
-    # 初始化客戶端
     logger.info("系統初始化完成 - 三軍總醫院放射腫瘤部衛教機器人阿泰 已上線")
-    
-    # 啟動Flask服務
     app.run(
         host='0.0.0.0',
-        port=int(os.environ.get("PORT", 8080)) ,
+        port=int(os.environ.get("PORT", 8080)),
         threaded=True,
         use_reloader=False
     )
