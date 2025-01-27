@@ -548,7 +548,9 @@ def create_rich_menu():
                 ),
                 action=action
             ))
-
+        response = requests.post('https://api.line.me/v2/bot/richmenu', headers=headers, data=json.dumps(body).encode('utf-8'))
+        response = response.json()
+        print(response)
         # 建立圖文選單（使用更嚴謹的尺寸驗證）
         rich_menu = RichMenuRequest(
             size=RichMenuSize(width=total_width, height=total_height),
