@@ -430,7 +430,7 @@ def create_rich_menu_1():
             ),
             selected=True,
             name="圖文選單1",
-            chat_bar_text="查看更多資訊",
+            chat_bar_text="點選主選單或輸入想詢問的事項",
             areas=areas
         )
 
@@ -476,7 +476,7 @@ def create_rich_menu_2():
                     },
                     "action": {
                         "type": "message",
-                        "text": "A"
+                        "text": "AA"
                     }
                 },
                 {
@@ -488,7 +488,7 @@ def create_rich_menu_2():
                     },
                     "action": {
                         "type": "message",
-                        "text": "B"
+                        "text": "BA"
                     }
                 },
                 {
