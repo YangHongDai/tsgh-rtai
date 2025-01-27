@@ -295,7 +295,7 @@ def handle_message(event):
             return _send_flex_reply(reply_token, get_doctor_menu())
 
         # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
-        if client.doctor_data in user_input:
+        if user_input in client.doctor_data:
             doctor_info = client.get_doctor_info(user_input)
             return _send_reply(reply_token, doctor_info)
 
