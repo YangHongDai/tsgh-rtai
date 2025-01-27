@@ -465,7 +465,7 @@ def create_rich_menu_2():
             },
             "selected": True,
             "name": "圖文選單 1",
-            "chatBarText": "查看更多資訊",
+            "chatBarText": "點選主選單或輸入想詢問的事項",
             "areas": [
                 {
                     "bounds": {
@@ -475,8 +475,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "message",
-                        "text": "AA"
+                        "type": "uri",
+                        "label": "本部團隊",
+                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/Doclist/191/10026/25014"
                     }
                 },
                 {
@@ -488,6 +489,7 @@ def create_rich_menu_2():
                     },
                     "action": {
                         "type": "message",
+                        "label": "醫師資訊",
                         "text": "BA"
                     }
                 },
@@ -499,8 +501,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "message",
-                        "text": "C"
+                        "type": "uri",
+                        "label": "定位流程",
+                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22861"
                     }
                 },
                 {
@@ -511,8 +514,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "message",
-                        "text": "D"
+                        "type": "uri",
+                        "label":"機器介紹",
+                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/26935"
                     }
                 },
                 {
@@ -523,8 +527,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "message",
-                        "text": "E"
+                        "type": "uri",
+                        "label":"網路掛號",
+                        "text": "https://www2.ndmctsgh.edu.tw/newwebreg/Register/Doctors?pos=B&DeptCode=312&DeptGroup=4"
                     }
                 },
                 {
@@ -535,8 +540,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "message",
-                        "text": "F"
+                        "type": "uri",
+                        "label": "癌症衛教",
+                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22863"
                     }
                 }
             ]
