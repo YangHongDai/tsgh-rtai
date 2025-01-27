@@ -8,7 +8,7 @@ import time
 from flask import Flask, request
 from diskcache import Cache
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from dotenv import load_dotenv
 
@@ -24,6 +24,7 @@ CACHE_TTL = 3600  # 1小時快取
 MAX_RETRIES = 3    # API呼叫重試次數
 
 # 初始化組件
+LINE_CHANNEL_TOKEN = 'cd1N2IYrGKTouMLPWRbgmDUl2DjyHEhDucB/9BGXaKUEWHeiSdc+iKY4v6fMUhZm1cV+bSCJm5uy+H2ZvkJwNiOmixiEqyh5DKbUAsGZFr67xn1VwDwiPP0uGt7dUAJiKhmmxdxyWEa+Fc986K2qgQdB04t89/1O/w1cDnyilFU='
 cache = Cache("response_cache")
 configuration = Configuration(access_token=os.getenv("LINE_CHANNEL_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
@@ -354,7 +355,206 @@ def callback():
     
     return "OK"
 
+def create_rich_menu_1():
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_blob_api = MessagingApiBlob(api_client)
+
+        areas = [
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=0,
+                    y=0,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='A')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=834,
+                    y=0,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='B')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=1663,
+                    y=0,
+                    width=834,
+                    height=843
+                ),
+                action=MessageAction(text='C')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=0,
+                    y=843,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='D')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=834,
+                    y=843,
+                    width=833,
+                    height=843
+                ),
+                action=MessageAction(text='E')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(
+                    x=1662,
+                    y=843,
+                    width=834,
+                    height=843
+                ),
+                action=MessageAction(text='F')
+            )
+        ]
+
+        rich_menu_to_create = RichMenuRequest(
+            size=RichMenuSize(
+                width=2500,
+                height=1686,
+            ),
+            selected=True,
+            name="圖文選單1",
+            chat_bar_text="查看更多資訊",
+            areas=areas
+        )
+
+        rich_menu_id = line_bot_api.create_rich_menu(
+            rich_menu_request=rich_menu_to_create
+        ).rich_menu_id
+
+        with open('./public/richmenu-a.png', 'rb') as image:
+            line_bot_blob_api.set_rich_menu_image(
+                rich_menu_id=rich_menu_id,
+                body=bytearray(image.read()),
+                _headers={'Content-Type': 'image/png'}
+            )
+
+        line_bot_api.set_default_rich_menu(rich_menu_id)
+
+
+def create_rich_menu_2():
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_blob_api = MessagingApiBlob(api_client)
+
+        # Create rich menu
+        headers = {
+            'Authorization': 'Bearer ' + LINE_CHANNEL_TOKEN,
+            'Content-Type': 'application/json'
+        }
+        body = {
+            "size": {
+                "width": 2500,
+                "height": 1686
+            },
+            "selected": True,
+            "name": "圖文選單 1",
+            "chatBarText": "查看更多資訊",
+            "areas": [
+                {
+                    "bounds": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "A"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 834,
+                        "y": 0,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "B"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 1663,
+                        "y": 0,
+                        "width": 834,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "C"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 0,
+                        "y": 843,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "D"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 834,
+                        "y": 843,
+                        "width": 833,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "E"
+                    }
+                },
+                {
+                    "bounds": {
+                        "x": 1662,
+                        "y": 843,
+                        "width": 838,
+                        "height": 843
+                    },
+                    "action": {
+                        "type": "message",
+                        "text": "F"
+                    }
+                }
+            ]
+        }
+
+        response = requests.post('https://api.line.me/v2/bot/richmenu', headers=headers, data=json.dumps(body).encode('utf-8'))
+        response = response.json()
+        print(response)
+        rich_menu_id = response["richMenuId"]
+        
+        # Upload rich menu image
+        with open('static/richmenu-1.jpg', 'rb') as image:
+            line_bot_blob_api.set_rich_menu_image(
+                rich_menu_id=rich_menu_id,
+                body=bytearray(image.read()),
+                _headers={'Content-Type': 'image/jpeg'}
+            )
+
+        line_bot_api.set_default_rich_menu(rich_menu_id)
+
+create_rich_menu_2()
+
 client = DeepSeekClient()  # ✅ 提前初始化
+
 # ------------------------- 服務啟動 -------------------------
 if __name__ == "__main__":
     # 初始化客戶端
