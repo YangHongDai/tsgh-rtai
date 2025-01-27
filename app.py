@@ -290,28 +290,25 @@ def handle_message(event):
         reply_token = event.reply_token
         user_id = event.source.user_id
 
-        # 🎯 1. 觸發醫師選單（增強匹配邏輯）
-        #if user_input.lower() in ["醫師資訊", "查醫師", "主治醫師"]:
-        #    return _send_flex_reply(reply_token, get_doctor_menu())
-
-        # 🎯 2. 處理醫師名稱查詢（支援含「醫師」稱謂）
-        #if "醫師" in user_input:
-        #    doctor_name = user_input.replace("醫師", "").strip()
-        #   if doctor_name in client.doctor_data:
-        #       doctor_info = client.get_doctor_info(doctor_name)
-        #       return _send_reply(reply_token, doctor_info)
-
-        # 🎯 2. 如果使用者選擇醫師名稱，返回醫師資訊
-        if user_input in client.doctor_data:
-            doctor_info = client.get_doctor_info(user_input)
-            return _send_reply(reply_token, doctor_info)
-
-        # 🎯 3. 安全檢查（含緊急詞攔截）
+        # 🎯 1. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
 
-        # 🎯 4. 原有醫療回覆生成流程
+        # 🎯 2. 處理醫師名稱查詢
+        doctor_info = None
+        if user_input in client.doctor_data:
+            doctor_info = client.get_doctor_info(user_input)
+        else:
+            matching_doctors = [name for name in client.doctor_data if name in user_input]
+            if matching_doctors:
+                best_match = max(matching_doctors, key=lambda x: (len(x), x in user_input))
+                doctor_info = client.get_doctor_info(best_match)
+
+        if doctor_info:
+            return _send_reply(reply_token, doctor_info)  # 如果有醫師資訊，回覆並結束函式
+
+        # 🎯 3. 醫療回覆生成流程（如果沒有找到醫師，則進行醫療回應）
         try:
             response = client.generate_medical_response(user_id, user_input)
             return _send_reply(reply_token, response)
