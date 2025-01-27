@@ -113,7 +113,7 @@ class DeepSeekClient:
             "7. 我們本部目前沒有質子治療\n"
             "8. 如果病人詢問治療'文獻'、'文章'、'研究'或是'參考資料'、'預後'，請翻成英文搜尋近五年PubMed\Cochrane\Web os science，並整合資訊給病人，不要輸出網址、期刊、臨床指引、標題、年份或是作者\n"
             "9. 注意你要區分SRT(surface radiotherapy)不等於SBRT (stereotactic body radiotherapy)，一種是治療蟹足腫，一種是治療腫瘤"
-            )
+            "10. 如果病人詢問某癌症該找哪位主治醫師，請不要給出答案 (有些醫師根本不在本院)，而是請他利用本line機器人選單查詢醫師資訊")
 
     def load_doctor_data(self):
         """載入醫師資訊"""
