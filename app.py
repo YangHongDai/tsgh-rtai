@@ -292,16 +292,6 @@ def handle_message(event):
         if user_input == "我想要查詢醫師相關資訊。":
             return 'OK'
 
-        # 发送回复
-        line_bot_api = MessagingApi(LINE_CHANNEL_TOKEN)
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[template_message]
-            )
-        )
-        return  # 🚨 无需返回特殊值，但需确保函数终止
-
 
         # 🎯 1. 安全檢查（含緊急詞攔截）
         
