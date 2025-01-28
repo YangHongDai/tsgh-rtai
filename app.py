@@ -290,22 +290,7 @@ def handle_message(event):
         user_id = event.source.user_id
         
         if user_input == "我想要查詢醫師相關資訊。":
-        # 创建按钮模板
-         buttons_template = ButtonsTemplate(
-            title="醫師查詢系統",
-            text="請選擇查詢方式：",
-            actions=[
-                MessageAction(label="依姓名查詢", text="姓名查詢"),
-                MessageAction(label="依科別查詢", text="科別查詢"),
-                URIAction(label="官方網站", uri="https://hospital.example.com")
-            ]
-        )
-
-        # 包装成模板消息
-        template_message = TemplateMessage(
-            alt_text="醫師查詢選單（手機不支援時顯示此文字）",
-            template=buttons_template
-        )
+            return 'OK'
 
         # 发送回复
         line_bot_api = MessagingApi(LINE_CHANNEL_TOKEN)
