@@ -295,6 +295,9 @@ def handle_message(event):
             return 'OK'
         if user_input == "我想要查詢癌症相關資訊。":
             return 'OK'
+        if user_input == "我想觀看影片介紹。":
+            return 'OK'
+        
         # 🎯 1. 安全檢查（含緊急詞攔截）
         
         safety_result = client.safety_check.check_input(user_input)
@@ -397,7 +400,7 @@ def create_rich_menu_1():
                     width=834,
                     height=843
                 ),
-                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22861')
+                action=MessageAction(text="我想觀看影片介紹。")
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -506,9 +509,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "uri",
-                        "label": "定位流程",
-                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22861"
+                        "type": "message",
+                        "label": "影音推播",
+                        "text": "我想觀看影片介紹。"
                     }
                 },
                 {
