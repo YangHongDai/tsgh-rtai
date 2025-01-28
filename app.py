@@ -287,7 +287,8 @@ def handle_message(event):
         user_input = event.message.text.strip()
         reply_token = event.reply_token
         user_id = event.source.user_id
-
+        if user_input == '我想要查詢醫師相關資訊。':
+            pass
         # 🎯 1. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
@@ -313,6 +314,8 @@ def handle_message(event):
         except Exception as e:
             logger.error(f"API呼叫異常: {str(e)}")
             return _send_reply(reply_token, f"{client.bot_intro}目前服務繁忙，請稍後再試。急診諮詢請撥(02)8792-3311")
+
+        
 
     except Exception as e:
         logger.error(f"訊息處理失敗: {str(e)}")
