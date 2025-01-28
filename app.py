@@ -9,7 +9,7 @@ import time
 from flask import Flask, request
 from diskcache import Cache
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction, URIAction,PushMessageRequest,ReplyMessageRequest
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, FlexMessage, MessagingApiBlob, RichMenuSize, RichMenuRequest, RichMenuArea, RichMenuBounds, MessageAction, URIAction,PushMessageRequest,ReplyMessageRequest,ButtonsTemplate,TemplateMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 from dotenv import load_dotenv
 
@@ -288,9 +288,38 @@ def handle_message(event):
         user_input = event.message.text.strip()
         reply_token = event.reply_token
         user_id = event.source.user_id
-        if user_input == '我想要查詢醫師相關資訊。':
-            return _send_reply(reply_token, '請點選您想要查詢的醫師姓名。')
+        
+        if user_input == "我想要查詢醫師相關資訊。":
+        # 创建按钮模板
+         buttons_template = ButtonsTemplate(
+            title="醫師查詢系統",
+            text="請選擇查詢方式：",
+            actions=[
+                MessageAction(label="依姓名查詢", text="姓名查詢"),
+                MessageAction(label="依科別查詢", text="科別查詢"),
+                URIAction(label="官方網站", uri="https://hospital.example.com")
+            ]
+        )
+
+        # 包装成模板消息
+        template_message = TemplateMessage(
+            alt_text="醫師查詢選單（手機不支援時顯示此文字）",
+            template=buttons_template
+        )
+
+        # 发送回复
+        line_bot_api = MessagingApi(LINE_CHANNEL_TOKEN)
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[template_message]
+            )
+        )
+        return  # 🚨 无需返回特殊值，但需确保函数终止
+
+
         # 🎯 1. 安全檢查（含緊急詞攔截）
+        
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
             return _send_reply(reply_token, safety_result['message'])
