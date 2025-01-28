@@ -289,7 +289,7 @@ def handle_message(event):
         reply_token = event.reply_token
         user_id = event.source.user_id
         if user_input == '我想要查詢醫師相關資訊。':
-            return "OK"
+            return _send_reply(reply_token, '請點選您想要查詢的醫師姓名。')
         # 🎯 1. 安全檢查（含緊急詞攔截）
         safety_result = client.safety_check.check_input(user_input)
         if not safety_result['safe']:
