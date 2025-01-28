@@ -293,7 +293,8 @@ def handle_message(event):
             return 'OK'
         if user_input == "我想要查詢本部團隊。":
             return 'OK'
-
+        if user_input == "我想要查詢癌症相關資訊。":
+            return 'OK'
         # 🎯 1. 安全檢查（含緊急詞攔截）
         
         safety_result = client.safety_check.check_input(user_input)
@@ -378,7 +379,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='我想要查詢本部團隊。')
+                action=MessageAction(text="我想要查詢本部團隊。")
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -387,7 +388,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=MessageAction(text='我想要查詢醫師相關資訊。')
+                action=MessageAction(text="我想要查詢醫師相關資訊。")
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -423,7 +424,7 @@ def create_rich_menu_1():
                     width=834,
                     height=843
                 ),
-                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22863')
+                action=MessageAction(text="我想要查詢癌症相關資訊。")
             )
         ]
 
@@ -481,7 +482,7 @@ def create_rich_menu_2():
                     "action": {
                         "type": "message",
                         "label": "本部團隊",
-                        "text": '我想要查詢本部團隊。'
+                        "text": "我想要查詢本部團隊。"
                     }
                 },
                 {
@@ -544,9 +545,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "uri",
-                        "label": "癌症衛教",
-                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/unit/10026/22863"
+                        "type": "message",
+                        "label": "癌症資訊",
+                        "text": "我想要查詢癌症相關資訊。"
                     }
                 }
             ]
