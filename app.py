@@ -291,7 +291,8 @@ def handle_message(event):
         
         if user_input == "我想要查詢醫師相關資訊。":
             return 'OK'
-
+        if user_input == "我想要查詢本部團隊。":
+            return 'OK'
 
         # 🎯 1. 安全檢查（含緊急詞攔截）
         
@@ -377,7 +378,7 @@ def create_rich_menu_1():
                     width=833,
                     height=843
                 ),
-                action=URIAction(uri='https://wwwv.tsgh.ndmctsgh.edu.tw/Doclist/191/10026/25014')
+                action=MessageAction(text='我想要查詢本部團隊。')
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(
@@ -478,9 +479,9 @@ def create_rich_menu_2():
                         "height": 843
                     },
                     "action": {
-                        "type": "uri",
+                        "type": "message",
                         "label": "本部團隊",
-                        "uri": "https://wwwv.tsgh.ndmctsgh.edu.tw/Doclist/191/10026/25014"
+                        "text": '我想要查詢本部團隊。'
                     }
                 },
                 {
