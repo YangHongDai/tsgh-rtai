@@ -217,15 +217,17 @@ class DeepSeekClient:
                 # 後處理
                 processed_response = self._post_process(raw_response)
                 return f"{self.bot_intro}{processed_response}"
-                
+
+            except requests.exceptions.Timeout:
+                self.logger.warning(f"DeepSeek API 超時（嘗試 {attempt+1}/{MAX_RETRIES}），切換到 OpenAI")
+                return self._fallback_to_openai(user_id, user_input, messages)       
+            
             except requests.exceptions.HTTPError as e:
                 error_msg = f"API錯誤 | 狀態碼: {e.response.status_code}"
                 if e.response.status_code == 402:
                     error_msg += " | 帳戶支付狀態異常"
                 self.logger.warning(f"{error_msg}（嘗試 {attempt+1}/{MAX_RETRIES}）")
-            except requests.exceptions.Timeout:
-                self.logger.warning(f"DeepSeek API 超時（嘗試 {attempt+1}/{MAX_RETRIES}），切換到 OpenAI")
-                return self._fallback_to_openai(user_id, user_input, messages)    
+             
             except requests.exceptions.RequestException as e:
                 self.logger.warning(f"API連線問題（嘗試 {attempt+1}/{MAX_RETRIES}）: {str(e)}")
 
@@ -259,7 +261,7 @@ class DeepSeekClient:
             messages = messages
             )
             #response = requests.post(self.openai_url, headers=openai_headers, json=openai_payload, timeout=30)
-            response.raise_for_status()
+            #response.raise_for_status()
             result = response.json()
 
             if "choices" not in result or len(result["choices"]) == 0:
