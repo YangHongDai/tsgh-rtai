@@ -201,8 +201,10 @@ class DeepSeekClient:
                 response.raise_for_status()
                 
                 result = response.json()
-                if "choices" not in result or len(result["choices"]) == 0:
-                    raise ValueError("無效的API響應格式")
+
+                if not result or "choices" not in result or not result["choices"]:
+                    self.logger.warning("DeepSeek API 回傳空結果，切換到 OpenAI")
+                    return self._fallback_to_openai(user_id, user_input, messages)
                 
                 raw_response = result["choices"][0]["message"]["content"]
                 
@@ -217,6 +219,9 @@ class DeepSeekClient:
                 # 後處理
                 processed_response = self._post_process(raw_response)
                 return f"{self.bot_intro}{processed_response}"
+            except ValueError:  # JSON 解碼失敗
+                self.logger.warning("DeepSeek API 回傳非 JSON 格式，切換到 OpenAI")
+                return self._fallback_to_openai(user_id, user_input, messages)
 
             except requests.exceptions.Timeout:
                 self.logger.warning(f"DeepSeek API 超時（嘗試 {attempt+1}/{MAX_RETRIES}），切換到 OpenAI")
