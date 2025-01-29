@@ -1,4 +1,5 @@
 from ast import Break
+import openai
 import os
 import re
 import json
@@ -23,6 +24,7 @@ app.config.update(JSON_AS_ASCII=False)
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 CACHE_TTL = 3600  # 1小時快取
 MAX_RETRIES = 3    # API呼叫重試次數
+OPENAI_API_KEY = "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"
 
 # 初始化組件
 LINE_CHANNEL_TOKEN = 'cd1N2IYrGKTouMLPWRbgmDUl2DjyHEhDucB/9BGXaKUEWHeiSdc+iKY4v6fMUhZm1cV+bSCJm5uy+H2ZvkJwNiOmixiEqyh5DKbUAsGZFr67xn1VwDwiPP0uGt7dUAJiKhmmxdxyWEa+Fc986K2qgQdB04t89/1O/w1cDnyilFU='
@@ -229,6 +231,7 @@ class DeepSeekClient:
 
             if attempt < max_retries - 1:
                 time.sleep(1 * (attempt + 1))
+        
         self.logger.warning("DeepSeek API 連線失敗，切換到 OpenAI API")  
 
         return self._fallback_to_openai(user_id, user_input, messages)      
@@ -250,7 +253,11 @@ class DeepSeekClient:
         }
 
         try:
-            response = requests.post(self.openai_url, headers=openai_headers, json=openai_payload, timeout=30)
+            response = openai.ChatCompletion.create(
+            model = "gpt-3.5-turbo",
+            messages = messages
+            )
+            #response = requests.post(self.openai_url, headers=openai_headers, json=openai_payload, timeout=30)
             response.raise_for_status()
             result = response.json()
 
@@ -283,7 +290,6 @@ class DeepSeekClient:
         return response[:1500]
 
 # ------------------------- 建立 Flex Message 選單 -------------------------
-# ------------------------- 修正後的 Flex Message 選單 -------------------------
 def get_doctor_menu():
     """動態生成醫師選單（符合 LINE Flex Message 規範）"""
     bubbles = []
