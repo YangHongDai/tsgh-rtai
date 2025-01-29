@@ -1,4 +1,5 @@
 from ast import Break
+import openai
 import os
 import re
 import json
@@ -93,7 +94,9 @@ class DeepSeekClient:
     
     def __init__(self):
         self.api_key = os.getenv("DEEPSEEK_API_KEY")
+        self.openai_key = os.getenv("OPENAI_API_KEY")
         self.base_url = DEEPSEEK_API_URL
+        self.openai_url = "https://api.openai.com/v1/chat/completions" 
         self.safety_check = MedicalSafety()
         self.logger = logging.getLogger('DeepSeekClient')
         self.cache = Cache("chat_memory")
@@ -225,9 +228,46 @@ class DeepSeekClient:
                 
             if attempt < max_retries - 1:
                 time.sleep(1 * (attempt + 1))
-                
-        return f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
+        self.logger.warning("DeepSeek API 連線失敗，切換到 OpenAI API")  
+        return self._fallback_to_openai(user_id, user_input, messages)      
+        #return f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
     
+    def _fallback_to_openai(self, user_id, user_input, messages):
+        """當 DeepSeek API 失敗時，使用 OpenAI API"""
+        openai_headers = {
+            "Authorization": f"Bearer {self.openai_key}",  # ✅ 改用 self.openai_key
+            "Content-Type": "application/json"
+        }
+
+        openai_payload = {
+            "model": "gpt-3.5-turbo",
+            "messages": messages,
+            "temperature": 0.1,
+            "max_tokens": 512,
+            "top_p": 0.9
+        }
+
+        try:
+            response = requests.post(self.openai_url, headers=openai_headers, json=openai_payload, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+
+            if "choices" not in result or len(result["choices"]) == 0:
+                raise ValueError("無效的 OpenAI API 響應")
+
+            raw_response = result["choices"][0]["message"]["content"]
+
+            history = self.cache.get(user_id, [])
+            history.append({"role": "user", "content": user_input})
+            history.append({"role": "assistant", "content": raw_response})
+            self.cache.set(user_id, history, expire=CACHE_TTL)
+
+            return f"{self.bot_intro}{self._post_process(raw_response)}"
+
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"OpenAI API 也發生錯誤: {str(e)}")
+            return f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
+
     def _post_process(self, response):
         """響應後處理"""
         # 移除Markdown格式
@@ -240,6 +280,43 @@ class DeepSeekClient:
         # 符合LINE訊息長度限制
         return response[:1500]
 
+
+    def _fallback_to_openai(self, user_id, user_input, messages):
+    """當 DeepSeek API 失敗時，使用 OpenAI API"""
+    openai_headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    openai_payload = {
+        "model": "gpt-3.5-turbo",
+        "messages": messages,
+        "temperature": 0.1,
+        "max_tokens": 512,
+        "top_p": 0.9
+    }
+
+    try:
+        response = requests.post(OPENAI_API_URL, headers=openai_headers, json=openai_payload, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+
+        if "choices" not in result or len(result["choices"]) == 0:
+            raise ValueError("無效的 OpenAI API 響應")
+
+        raw_response = result["choices"][0]["message"]["content"]
+
+        # 記錄歷史對話
+        history = self.cache.get(user_id, [])
+        history.append({"role": "user", "content": user_input})
+        history.append({"role": "assistant", "content": raw_response})
+        self.cache.set(user_id, history, expire=CACHE_TTL)
+
+        return f"{self.bot_intro}{self._post_process(raw_response)}"
+
+    except requests.exceptions.RequestException as e:
+        self.logger.error(f"OpenAI API 也發生錯誤: {str(e)}")
+        return f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
 # ------------------------- 建立 Flex Message 選單 -------------------------
 # ------------------------- 修正後的 Flex Message 選單 -------------------------
 def get_doctor_menu():
