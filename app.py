@@ -204,7 +204,7 @@ class DeepSeekClient:
 
                 if not result or "choices" not in result or not result["choices"]:
                     self.logger.warning("DeepSeek API 回傳空結果，切換到 OpenAI")
-                    return self._fallback_to_openai(user_id, user_input, messages),f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
+                    return self._fallback_to_openai(user_id, user_input, messages)
                 
                 raw_response = result["choices"][0]["message"]["content"]
                 
@@ -221,27 +221,27 @@ class DeepSeekClient:
                 return f"{self.bot_intro}{processed_response}"
             except ValueError:  # JSON 解碼失敗
                 self.logger.warning("DeepSeek API 回傳非 JSON 格式，切換到 OpenAI")
-                return self._fallback_to_openai(user_id, user_input, messages),f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
+                return self._fallback_to_openai(user_id, user_input, messages)
 
             except requests.exceptions.Timeout:
                 self.logger.warning(f"DeepSeek API 超時（嘗試 {attempt+1}/{MAX_RETRIES}），切換到 OpenAI")
-                return self._fallback_to_openai(user_id, user_input, messages),f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"       
+                return self._fallback_to_openai(user_id, user_input, messages)       
             
             except requests.exceptions.HTTPError as e:
                 error_msg = f"API錯誤 | 狀態碼: {e.response.status_code}"
                 if e.response.status_code == 402:
                     error_msg += " | 帳戶支付狀態異常"
-                self.logger.warning(f"{error_msg}（嘗試 {attempt+1}/{MAX_RETRIES}）"),f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
+                self.logger.warning(f"{error_msg}（嘗試 {attempt+1}/{MAX_RETRIES}）")
              
             except requests.exceptions.RequestException as e:
-                self.logger.warning(f"API連線問題（嘗試 {attempt+1}/{MAX_RETRIES}）: {str(e)}"),f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
+                self.logger.warning(f"API連線問題（嘗試 {attempt+1}/{MAX_RETRIES}）: {str(e)}")
 
             if attempt < max_retries - 1:
                 time.sleep(1 * (attempt + 1))
         
         self.logger.warning("DeepSeek API 連線失敗，切換到 OpenAI API")  
 
-        return self._fallback_to_openai(user_id, user_input, messages),f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"      
+        return self._fallback_to_openai(user_id, user_input, messages)      
         #return f"{self.bot_intro}系統暫時無法處理您的請求，請稍後再試或聯繫放射腫瘤部衛教中心 (02)8792-3311"
     
     def _fallback_to_openai(self, user_id, user_input, messages):
