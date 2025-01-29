@@ -239,6 +239,7 @@ class DeepSeekClient:
     
     def _fallback_to_openai(self, user_id, user_input, messages):
         """當 DeepSeek API 失敗時，使用 OpenAI API"""
+        openai.api_key = os.getenv("OPENAI_API_KEY")
         openai_headers = {
             "Authorization": f"Bearer {self.openai_key}",  # ✅ 改用 self.openai_key
             "Content-Type": "application/json"
